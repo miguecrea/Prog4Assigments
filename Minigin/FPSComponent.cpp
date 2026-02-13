@@ -7,30 +7,33 @@
 
 void dae::FPSComponent::Update()
 {
-	const float deltaTime{ SceneManager::GetInstance().GetDeltaTime() };
 
-	++m_NrFrames;
-	m_ElapsedTime += deltaTime;
+    const float deltaTime{ SceneManager::GetInstance().GetDeltaTime() };
 
-	if (m_ElapsedTime >= m_RefreshTime)
-	{
-		const int currentFrameRate{ static_cast<int>(m_NrFrames / m_ElapsedTime) };
+    ++m_NrFrames;
+    m_ElapsedTime += deltaTime;
 
-		//Dirty flag
-		if (currentFrameRate != m_FrameRate)
-		{
-			m_FrameRate = currentFrameRate;
-			const std::string frameRateString{ std::to_string(m_FrameRate) + " FPS" };
+    if (m_ElapsedTime >= m_RefreshTime)
+    {
+        const int currentFrameRate{
+            static_cast<int>(std::round(m_NrFrames / m_ElapsedTime))
+        };
 
-			if (m_pTextComponent)
-			{
-				m_pTextComponent->SetTextToTexture(frameRateString);
-			}
-		}
+        if (currentFrameRate != m_FrameRate)
+        {
+            m_FrameRate = currentFrameRate;
 
-		m_NrFrames = 0;
-		m_ElapsedTime = 0.f;
-	}
+            if (m_pTextComponent)
+            {
+                m_pTextComponent->SetTextToTexture(
+                    std::to_string(m_FrameRate) + " FPS"
+                );
+            }
+        }
+
+        m_NrFrames = 0;
+        m_ElapsedTime -= m_RefreshTime; // prevents drift
+    }
 }
 
 dae::FPSComponent::FPSComponent(std::shared_ptr<TextComponent> pTextComponent, float waitingTime, int priority)
@@ -38,5 +41,4 @@ dae::FPSComponent::FPSComponent(std::shared_ptr<TextComponent> pTextComponent, f
 {
 
 
-	//GetOwner()->GetComponent<
 }

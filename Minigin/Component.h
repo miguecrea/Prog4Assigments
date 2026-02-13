@@ -10,13 +10,18 @@ namespace dae
 		virtual void FixedUpdate();
 		virtual void Render();
 
-		virtual ~Component() = default;
-		Component(const Component & other) = default;
-		Component(Component&& other) = default;
-		Component& operator=(const Component& other) = default;
-		Component& operator=(Component&& other) = default;
+
+	  // Components should not be able to change owner.
+	  // The default copy and move constructor for a component 
+	  // is insufficient.
+
+		Component(const Component&) = delete;
+		Component& operator=(const Component&) = delete;
+		Component(Component&&) = delete;
+		Component& operator=(Component&&) = delete;
 
 		GameObject * GetOwner() const;
+
 		void SetOwner(GameObject* pGameObject);
 
 		bool operator<(const Component& other) const;

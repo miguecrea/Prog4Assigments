@@ -51,7 +51,7 @@ dae::Scene* dae::SceneManager::GetCurrentScene() const
 	return m_CurrentScene;
 }
 
-dae::Scene& dae::SceneManager::CreateScene(const std::string& name)
+dae::Scene & dae::SceneManager::CreateScene(const std::string& name)
 {
 	const auto& scene = std::shared_ptr<Scene>(new Scene(name));
 	m_pScenes.push_back(scene);
