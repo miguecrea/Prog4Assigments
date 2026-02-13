@@ -2,7 +2,6 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include "Scene.h"
 #include "Singleton.h"
 
 namespace dae
@@ -11,13 +10,27 @@ namespace dae
 	class SceneManager final : public Singleton<SceneManager>
 	{
 	public:
-		Scene& CreateScene();
+		Scene& CreateScene(const std::string& name);
 
-		void Update();
-		void Render();
+		void Update(float deltaTime);
+		void FixedUpdate(float fixedTimeStep);
+		void Render(float framePercentage);
+
+		float GetDeltaTime() const;
+		float GetFixedTimeStep() const;
+		float GetFramePercentage() const;
+
+		Scene* GetCurrentScene() const;
 	private:
 		friend class Singleton<SceneManager>;
 		SceneManager() = default;
-		std::vector<std::unique_ptr<Scene>> m_scenes{};
+
+		std::vector<std::shared_ptr<Scene>> m_pScenes;
+
+		Scene* m_CurrentScene{};
+
+		float m_DeltaTime{};
+		float m_FixedTimeStep{};
+		float m_FramePercentage{};
 	};
 }

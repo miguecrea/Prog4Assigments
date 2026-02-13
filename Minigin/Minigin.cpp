@@ -4,6 +4,7 @@
 
 #if WIN32
 #define WIN32_LEAN_AND_MEAN 
+#define NOMINMAX
 #include <windows.h>
 #endif
 
@@ -15,6 +16,15 @@
 #include "SceneManager.h"
 #include "Renderer.h"
 #include "ResourceManager.h"
+
+
+#include <algorithm>
+
+
+#include <chrono>
+#include <thread>
+
+
 
 SDL_Window* g_window{};
 
@@ -87,9 +97,11 @@ dae::Minigin::~Minigin()
 	SDL_Quit();
 }
 
+
 void dae::Minigin::Run(const std::function<void()>& load)
 {
 	load();
+
 #ifndef __EMSCRIPTEN__
 	while (!m_quit)
 		RunOneFrame();
@@ -100,7 +112,43 @@ void dae::Minigin::Run(const std::function<void()>& load)
 
 void dae::Minigin::RunOneFrame()
 {
-	m_quit = !InputManager::GetInstance().ProcessInput();
-	SceneManager::GetInstance().Update();
-	Renderer::GetInstance().Render();
+	static auto lastTime = std::chrono::high_resolution_clock::now();
+	static float timeLag = 0.0f;
+
+	constexpr float fixedTimeStep{ 0.016f };
+	constexpr float maximumAllowedFrameTime{ 0.1f };
+	constexpr float desiredFPS{ 170.f };
+	constexpr int maxWaitingTimeMs{ static_cast<int>(1000 / desiredFPS) };
+
+	auto& renderer = Renderer::GetInstance();
+	auto& sceneManager = SceneManager::GetInstance();
+	auto& input = InputManager::GetInstance();
+
+	// Calculate delta time
+	const auto currentTime = std::chrono::high_resolution_clock::now();
+	float deltaTime = std::chrono::duration<float>(currentTime - lastTime).count();
+	lastTime = currentTime;
+
+	deltaTime = std::min(deltaTime, maximumAllowedFrameTime);
+	timeLag += deltaTime;
+
+	// Process input
+	m_quit = !input.ProcessInput();
+
+	// Fixed updates
+	while (timeLag >= fixedTimeStep)
+	{
+		sceneManager.FixedUpdate(fixedTimeStep);
+		timeLag -= fixedTimeStep;
+	}
+
+	// Variable update
+	sceneManager.Update(deltaTime);
+
+	// Render with interpolation
+	renderer.Render(timeLag / fixedTimeStep);
+
+#ifndef __EMSCRIPTEN__
+	std::this_thread::sleep_for(std::chrono::milliseconds(maxWaitingTimeMs));
+#endif
 }

@@ -1,24 +1,62 @@
 #include "SceneManager.h"
 #include "Scene.h"
 
-void dae::SceneManager::Update()
+void dae::SceneManager::Update(float deltaTime)
 {
-	for(auto& scene : m_scenes)
+	m_DeltaTime = deltaTime;
+
+	for (auto& scene : m_pScenes)
 	{
 		scene->Update();
 	}
 }
 
-void dae::SceneManager::Render()
+void dae::SceneManager::FixedUpdate(float fixedTimeStep)
 {
-	for (const auto& scene : m_scenes)
+	m_FixedTimeStep = fixedTimeStep;
+
+	for (auto& scene : m_pScenes)
+	{
+		scene->FixedUpdate();
+	}
+}
+
+void dae::SceneManager::Render(float framePercentage)
+{
+	m_FramePercentage = framePercentage;
+
+	for (const auto& scene : m_pScenes)
 	{
 		scene->Render();
 	}
 }
 
-dae::Scene& dae::SceneManager::CreateScene()
+float dae::SceneManager::GetDeltaTime() const
 {
-	m_scenes.emplace_back(new Scene());
-	return *m_scenes.back();
+	return m_DeltaTime;
+}
+
+float dae::SceneManager::GetFixedTimeStep() const
+{
+	return m_FixedTimeStep;
+}
+
+float dae::SceneManager::GetFramePercentage() const
+{
+	return m_FramePercentage;
+}
+
+dae::Scene* dae::SceneManager::GetCurrentScene() const
+{
+	return m_CurrentScene;
+}
+
+dae::Scene& dae::SceneManager::CreateScene(const std::string& name)
+{
+	const auto& scene = std::shared_ptr<Scene>(new Scene(name));
+	m_pScenes.push_back(scene);
+
+	m_CurrentScene = scene.get();
+
+	return *scene;
 }
