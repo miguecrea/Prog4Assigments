@@ -11,7 +11,6 @@
 //	class TextObject final 
 //	{
 //	public:
-//	
 //
 //		void SetText(const std::string& text);
 //		void SetPosition(float x, float y);

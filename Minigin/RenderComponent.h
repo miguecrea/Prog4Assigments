@@ -20,10 +20,10 @@ namespace dae
 
 		RenderComponent(int priority = -2);
 		virtual ~RenderComponent() = default;
-		RenderComponent(const RenderComponent& other) = default;
-		RenderComponent(RenderComponent&& other) = default;
-		RenderComponent& operator=(const RenderComponent& other) = default;
-		RenderComponent& operator=(RenderComponent&& other) = default;
+		RenderComponent(const RenderComponent& other) = delete;
+		RenderComponent(RenderComponent&& other) = delete;
+		RenderComponent& operator=(const RenderComponent& other) = delete;
+		RenderComponent& operator=(RenderComponent&& other) = delete;
 
 	private:
 		std::shared_ptr<Texture2D> m_pTexture{};
