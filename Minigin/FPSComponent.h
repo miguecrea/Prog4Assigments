@@ -13,10 +13,10 @@ namespace dae
 
 		FPSComponent(std::shared_ptr<TextComponent> pTextComponent = nullptr, float refreshTime = 0.5f, int priority = 0);
 		virtual ~FPSComponent() = default;
-		FPSComponent(const FPSComponent& other) = default;
-		FPSComponent(FPSComponent&& other) = default;
-		FPSComponent& operator=(const FPSComponent& other) = default;
-		FPSComponent& operator=(FPSComponent&& other) = default;
+		FPSComponent(const FPSComponent& other) = delete;
+		FPSComponent(FPSComponent&& other) = delete;
+		FPSComponent& operator=(const FPSComponent& other) = delete;
+		FPSComponent& operator=(FPSComponent&& other) = delete;
 
 	private:
 		std::shared_ptr<TextComponent> m_pTextComponent;

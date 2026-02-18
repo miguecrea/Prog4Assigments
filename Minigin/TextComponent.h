@@ -12,10 +12,10 @@ namespace dae
 	public:
 		TextComponent(std::shared_ptr<RenderComponent> pRenderComponent = nullptr, std::shared_ptr<Font> pFont = nullptr, int priority = -1);
 		virtual ~TextComponent() = default;
-		TextComponent(const TextComponent& other) = default;
-		TextComponent(TextComponent&& other) = default;
-		TextComponent& operator=(const TextComponent& other) = default;
-		TextComponent& operator=(TextComponent&& other) = default;
+		TextComponent(const TextComponent& other) = delete;
+		TextComponent(TextComponent&& other) = delete;
+		TextComponent& operator=(const TextComponent& other) = delete;
+		TextComponent& operator=(TextComponent&& other) = delete;
 
 		void SetTextToTexture(const std::string& text);
 		void SetFont(std::shared_ptr<Font> font);

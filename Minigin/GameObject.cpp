@@ -1,7 +1,7 @@
 #include "GameObject.h"
 #include "ResourceManager.h"
 #include "Renderer.h"
-#include <Algorithm>
+#include <algorithm>
 #include <iostream>
 #include "SceneManager.h"
 #include "Scene.h"
@@ -70,7 +70,12 @@ void dae::GameObject::AddComponent(std::shared_ptr<Component> pComponent)
 	//Find components of the same type
 	auto typeCompare = [&](const std::shared_ptr<Component>& pComponentInVector)
 		{
-			return typeid(*pComponent) == typeid(*pComponentInVector);
+
+			if (pComponent && pComponentInVector)
+			{
+				return typeid(*pComponent) == typeid(*pComponentInVector);
+			}
+			return false;
 		};
 
 	if (std::find_if(m_pComponents.begin(), m_pComponents.end(), typeCompare) != m_pComponents.end())
