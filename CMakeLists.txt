@@ -31,6 +31,8 @@ add_executable(${TARGET_NAME} ${TARGET_PARAM}
   Minigin/Component.cpp
   Minigin/TextComponent.cpp
   Minigin/RenderComponent.cpp
+  Minigin/SineMovementComponent.cpp
+
 
 )
 

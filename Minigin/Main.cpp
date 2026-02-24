@@ -14,22 +14,45 @@
 #include"GameObject.h"
 #include"TextComponent.h"
 #include"FPSComponent.h"
-
+#include"SineMovementComponent.h"
 #include <filesystem>
+
 namespace fs = std::filesystem;
 
 
-void CreationOfGameObjectsAndComponents(dae::Scene & scene);
+void CreationOfGameObjectsAndComponents(dae::Scene& scene);
 
 static void load()
 {
 
-	auto & scene = dae::SceneManager::GetInstance().CreateScene("Scene1");
+	auto& scene = dae::SceneManager::GetInstance().CreateScene("Scene1");
+
+	//
+	auto pRotatingBallParent = std::make_shared<dae::GameObject>();  //make a game object
+
+	auto pParentRenderer = std::make_shared<dae::RenderComponent>();
+	pParentRenderer->SetTexture("Balloom.png");
+	pRotatingBallParent->AddComponent(pParentRenderer);  //add renderer to r
+	pRotatingBallParent->SetPosition(100, 230);
+
+	const glm::vec3 origin{ 300.f,320.f,0.f };
+	constexpr float length{ 50.f }, cycleTime{ 5.f };
+	auto sineMovementParent = std::make_shared<dae::SineMovementComponent>(origin, length, cycleTime);
+	pRotatingBallParent->AddComponent(sineMovementParent);
 
 
+	auto pRotatingBallChild = std::make_shared<dae::GameObject>();
+	auto pChildRenderer = std::make_shared<dae::RenderComponent>();
+	pChildRenderer->SetTexture("Oneal.png");
+	pRotatingBallChild->AddComponent(pChildRenderer);
+	auto sineMovementChild = std::make_shared<dae::SineMovementComponent>(glm::vec3{ 0.f,0.f,0.f }, length * 2.f, cycleTime);
+	pRotatingBallChild->AddComponent(sineMovementChild);
 
+	pRotatingBallParent->AddChild(pRotatingBallChild, true); //set as child 
 
-	// HAVE Functinality to add remove components 
+	//Only Add Parent to the scene 
+
+	scene.Add(pRotatingBallParent);
 
 
 	CreationOfGameObjectsAndComponents(scene);
@@ -44,10 +67,6 @@ void CreationOfGameObjectsAndComponents(dae::Scene& scene)
 	pLogoImage->SetPosition(210, 200);
 
 	scene.Add(pLogoImage);
-
-
-
-
 
 	auto pTextImage = std::make_shared<dae::GameObject>();
 
@@ -87,15 +106,15 @@ void CreationOfGameObjectsAndComponents(dae::Scene& scene)
 }
 
 
-int main(int, char*[]) {
+int main(int, char* []) {
 #if __EMSCRIPTEN__
 	fs::path data_location = "";
 #else
 	fs::path data_location = "./Data/";
-	if(!fs::exists(data_location))
+	if (!fs::exists(data_location))
 		data_location = "../Data/";
 #endif
 	dae::Minigin engine(data_location);
 	engine.Run(load);
-    return 0;
+	return 0;
 }

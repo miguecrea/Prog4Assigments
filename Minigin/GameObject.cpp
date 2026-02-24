@@ -1,306 +1,241 @@
 #include "GameObject.h"
-#include "ResourceManager.h"
-#include "Renderer.h"
 #include <algorithm>
-#include <iostream>
-#include "SceneManager.h"
-#include "Scene.h"
 
-class ComponentTypeAlreadyAttachedException {};
+using namespace dae;
 
-dae::GameObject::GameObject(int priority)
-	:m_Priority{ priority }
+GameObject::GameObject(int priority)
+    : m_Priority(priority)
 {
 }
 
-dae::GameObject::~GameObject() = default;
+GameObject::~GameObject() = default;
 
-void dae::GameObject::Update()
+//
+// -----------------------------
+// Update / Render
+// -----------------------------
+//
+
+void GameObject::Update()
 {
-	for (auto& pComponent : m_pComponents)
-	{
-		pComponent->Update();
-	}
+    if (m_IsDestroyed) return;
 
-	for (auto& pChild : m_pChildren)
-	{
-		pChild->Update();
-	}
+    if (m_IsTransformDirty)
+        GetWorldPosition();
+
+    for (auto& comp : m_pComponents)
+        comp->Update();
+
+    for (auto& child : m_pChildren)
+        child->Update();
 }
 
-void dae::GameObject::FixedUpdate()
+void GameObject::FixedUpdate()
 {
-	for (auto& pComponent : m_pComponents)
-	{
-		pComponent->FixedUpdate();
-	}
+    if (m_IsDestroyed) return;
 
-	for (auto& pChild : m_pChildren)
-	{
-		pChild->FixedUpdate();
-	}
+    for (auto& comp : m_pComponents)
+        comp->FixedUpdate();
+
+    for (auto& child : m_pChildren)
+        child->FixedUpdate();
 }
 
-void dae::GameObject::Render() const
+void GameObject::Render() const
 {
-	for (auto& pComponent : m_pComponents)
-	{
-		pComponent->Render();
-	}
+    if (m_IsDestroyed) return;
 
-	for (auto& pChild : m_pChildren)
-	{
-		pChild->Render();
-	}
+    for (const auto& comp : m_pComponents)
+        comp->Render();
+
+    for (const auto& child : m_pChildren)
+        child->Render();
 }
 
-void dae::GameObject::SortChildren()
-{
-	//Sort the children based on priority
-	auto compareFunction = [&](const std::shared_ptr<GameObject>& pLhs, const std::shared_ptr<GameObject>& pRhs)
-		{
-			return pRhs->GetPriority() < pLhs->GetPriority();
-		};
+//
+// -----------------------------
+// Transform
+// -----------------------------
+//
 
-	std::sort(m_pChildren.begin(), m_pChildren.end(), compareFunction);
+void GameObject::SetPosition(float x, float y)
+{
+    m_Transform.SetLocalPosition(x, y);
+    SetTransformDirty();
 }
 
-void dae::GameObject::AddComponent(std::shared_ptr<Component> pComponent)
+glm::vec3 GameObject::GetLocalPosition() const
 {
-	//Find components of the same type
-	auto typeCompare = [&](const std::shared_ptr<Component>& pComponentInVector)
-		{
-
-			if (pComponent && pComponentInVector)
-			{
-				return typeid(*pComponent) == typeid(*pComponentInVector);
-			}
-			return false;
-		};
-
-	if (std::find_if(m_pComponents.begin(), m_pComponents.end(), typeCompare) != m_pComponents.end())
-	{
-		throw ComponentTypeAlreadyAttachedException();
-	}
-
-	pComponent->SetOwner(this);
-
-	m_pComponents.push_back(pComponent);
-
-	//Sort the components based on priority
-	auto priorityCompare = [&](const std::shared_ptr<Component>& pLhs, const std::shared_ptr<Component>& pRhs)
-		{
-			return *pRhs < *pLhs;
-		};
-
-	std::sort(m_pComponents.begin(), m_pComponents.end(), priorityCompare);
+    return m_Transform.GetLocalPosition();
 }
 
-
-
-dae::GameObject* dae::GameObject::GetParent() const
+glm::vec3 GameObject::GetWorldPosition()
 {
-	return m_pParent;
+
+    //Only Calculate when Neededed
+    if (m_IsTransformDirty)
+    {
+        if (m_pParent)
+        {
+            glm::vec3 parentWorld = m_pParent->GetWorldPosition();
+            m_Transform.SetWorldPosition(parentWorld + m_Transform.GetLocalPosition());
+        }
+        else
+        {
+            m_Transform.SetWorldPosition(m_Transform.GetLocalPosition());
+        }
+
+        m_IsTransformDirty = false;
+    }
+
+    return m_Transform.GetWorldPosition();
 }
 
-void dae::GameObject::SetParent(GameObject* pNewParent, bool keepWorldPosition)
+void GameObject::SetTransformDirty()
 {
-	if (pNewParent)
-	{
-		if (!pNewParent->CanBeParentOf(this))
-		{
-			return;
-		}
-	}
+    m_IsTransformDirty = true;
 
-	//Remove itself as a child from the previous parent
-	if (m_pParent)
-	{
-		m_pParent->RemoveChild(shared_from_this());
-	}
-	else
-	{
-		SceneManager::GetInstance().GetCurrentScene()->Remove(shared_from_this());
-	}
-
-	//Set the given parent
-	m_pParent = pNewParent;
-
-	//Update position
-	if (m_pParent == nullptr)
-	{
-		//Local position is now world position
-		const auto position{ m_Transform.GetWorldPosition() };
-		SetPosition(position.x, position.y);
-	}
-	else
-	{
-		//Add itself as a child to the given parent
-		m_pParent->m_pChildren.push_back(shared_from_this());
-		m_pParent->SortChildren();
-
-		if (keepWorldPosition)
-		{
-			const auto position{ m_Transform.GetLocalPosition() - m_pParent->GetWorldPosition() };
-			SetPosition(position.x, position.y);
-		}
-		else
-		{
-			//Recalculate world position
-			SetTransformDirty();
-		}
-	}
+    for (auto& child : m_pChildren)
+        child->SetTransformDirty();
 }
 
+//
+// -----------------------------
+// Hierarchy
+// -----------------------------
+//
 
-void dae::GameObject::AddChild(std::shared_ptr<GameObject> pNewChild, bool keepWorldPosition)
+void GameObject::SetParent(GameObject* pNewParent, bool keepWorldPosition)
 {
-	if (!this->CanBeParentOf(pNewChild.get())) return;
+    if (pNewParent == m_pParent)
+        return;
 
-	//Remove from the old parent
-	GameObject* pCurrentParent{ pNewChild->m_pParent };
+    if (pNewParent == this)
+        return;
 
-	if (pCurrentParent)
-	{
-		auto& pOtherChildren = pCurrentParent->m_pChildren;
-		pOtherChildren.erase(std::remove(pOtherChildren.begin(), pOtherChildren.end(), pNewChild));
-	}
-	else
-	{
-		SceneManager::GetInstance().GetCurrentScene()->Remove(pNewChild);
-	}
+    if (pNewParent && !pNewParent->CanBeParentOf(this))
+        return;
 
-	//Set itself as parent of the child
-	pNewChild->m_pParent = this;
+    glm::vec3 worldPos = GetWorldPosition();
 
-	//Add the child to its children list
-	m_pChildren.push_back(pNewChild);
-	SortChildren();
+    // Remove from old parent
+    if (m_pParent)
+    {
+        auto & siblings = m_pParent->m_pChildren;
+        siblings.erase(
+            std::remove_if(siblings.begin(), siblings.end(),
+                [this](const std::shared_ptr<GameObject>& obj)
+                {
+                    return obj.get() == this;
+                }),
+            siblings.end());
+    }
 
-	//Update position
-	if (keepWorldPosition)
-	{
-		const auto position{ pNewChild->GetLocalPosition() - m_Transform.GetWorldPosition() };
-		SetPosition(position.x, position.y);
-	}
-	else
-	{
-		//Recalculate world position
-		SetTransformDirty();
-	}
+    m_pParent = pNewParent;
+
+    if (m_pParent)
+    {
+        m_pParent->m_pChildren.push_back(shared_from_this());
+        m_pParent->SortChildren();
+    }
+
+    if (keepWorldPosition)
+    {
+        if (m_pParent)
+        {
+            glm::vec3 parentWorld = m_pParent->GetWorldPosition();
+            m_Transform.SetLocalPosition(worldPos - parentWorld);
+        }
+        else
+        {
+            m_Transform.SetLocalPosition(worldPos);
+        }
+    }
+
+    SetTransformDirty();
 }
 
-void dae::GameObject::RemoveChild(std::shared_ptr<GameObject> pGameObject)
+void GameObject::AddChild(std::shared_ptr<GameObject> pGameObject, bool keepWorldPosition)
 {
-	//Remove the given child from the children list
-	m_pChildren.erase(std::remove(m_pChildren.begin(), m_pChildren.end(), pGameObject));
+    if (!pGameObject) return;
 
-	//Remove itself as a parent of the child.
-	pGameObject->m_pParent = nullptr;
-
-	//Add to the scene
-	SceneManager::GetInstance().GetCurrentScene()->Add(pGameObject);
-
-	//Update position, rotation and scale
-	const auto position{ m_Transform.GetWorldPosition() };
-	SetPosition(position.x, position.y);
+    pGameObject->SetParent(this, keepWorldPosition);
 }
 
-bool dae::GameObject::CanBeParentOf(GameObject* pChild) const
+void GameObject::RemoveChild(std::shared_ptr<GameObject> pGameObject)
 {
-	//Object will be destroyed
-	if (this->IsDestroyed())
-	{
-		return false;
-	}
+    if (!pGameObject) return;
 
-	//Grandparent is not nullptr
-	if (m_pParent)
-	{
-		//Child is the grandparent
-		if (m_pParent == pChild)
-		{
-			return false;
-		}
-		else
-		{
-			//Check grand-grandparents
-			return m_pParent->CanBeParentOf(pChild);
-		}
-	}
-	else
-	{
-		return true;
-	}
+    if (pGameObject->m_pParent != this)
+        return;
+
+    pGameObject->SetParent(nullptr, true);
 }
 
-void dae::GameObject::Destroy()
+GameObject* GameObject::GetParent() const
 {
-	m_IsDestroyed = true;
-
-	//Destroy all children
-	for (auto& pChild : m_pChildren)
-	{
-		pChild->Destroy();
-	}
-
-	//Remove yourself from the parent
-	if (m_pParent)
-	{
-		m_pParent->RemoveChild(shared_from_this());
-	}
+    return m_pParent;
 }
 
-bool dae::GameObject::IsDestroyed() const
+bool GameObject::CanBeParentOf(GameObject* pChild) const
 {
-	return m_IsDestroyed;
+    if (!pChild) return false;
+    if (pChild == this) return false;
+
+    GameObject* current = m_pParent;
+
+    while (current)
+    {
+        if (current == pChild)
+            return false;
+
+        current = current->m_pParent;
+    }
+
+    return true;
 }
 
-glm::vec3 dae::GameObject::GetWorldPosition()
+void GameObject::SortChildren()
 {
-	if (m_IsTransformDirty)
-	{
-		m_IsTransformDirty = false;
-
-		if (m_pParent)
-		{
-			m_Transform.UpdateWorldPosition(m_Transform.GetLocalPosition() + m_pParent->GetWorldPosition());
-			return m_Transform.GetWorldPosition();
-		}
-		else
-		{
-			m_Transform.UpdateWorldPosition(m_Transform.GetLocalPosition());
-			return m_Transform.GetWorldPosition();
-		}
-	}
-	else
-	{
-		return m_Transform.GetWorldPosition();
-	}
+    std::sort(m_pChildren.begin(), m_pChildren.end(),
+        [](const std::shared_ptr<GameObject>& a,
+            const std::shared_ptr<GameObject>& b)
+        {
+            return a->GetPriority() < b->GetPriority();
+        });
 }
 
-glm::vec3 dae::GameObject::GetLocalPosition() const
+//
+// -----------------------------
+// Components
+// -----------------------------
+//
+
+void GameObject::AddComponent(std::shared_ptr<Component> pComponent)
 {
-	return m_Transform.GetLocalPosition();
+    if (!pComponent) return;
+
+    pComponent->SetOwner(this);
+    m_pComponents.push_back(pComponent);
 }
 
-int dae::GameObject::GetPriority() const
+//
+// -----------------------------
+// Priority / Destruction
+// -----------------------------
+//
+
+int GameObject::GetPriority() const
 {
-	return m_Priority;
+    return m_Priority;
 }
 
-void dae::GameObject::SetTransformDirty()
+void GameObject::Destroy()
 {
-	m_IsTransformDirty = true;
-
-	for (const auto& pChild : m_pChildren)
-	{
-		pChild->SetTransformDirty();
-	}
+    m_IsDestroyed = true;
 }
 
-void dae::GameObject::SetPosition(float x, float y)
+bool GameObject::IsDestroyed() const
 {
-	SetTransformDirty();
-	m_Transform.SetPosition(x, y, 0.f);
+    return m_IsDestroyed;
 }
