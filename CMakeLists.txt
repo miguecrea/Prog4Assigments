@@ -32,6 +32,8 @@ add_executable(${TARGET_NAME} ${TARGET_PARAM}
   Minigin/TextComponent.cpp
   Minigin/RenderComponent.cpp
   Minigin/SineMovementComponent.cpp
+  Minigin/CombinedGraphComponent.cpp
+  Minigin/GraphComponent.cpp
 
 
 )
@@ -111,6 +113,63 @@ if(NOT SDL3_ttf_FOUND)
   endif()
 endif()
 
+#########
+
+# ---------------------------
+# Dear ImGui
+# ---------------------------
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG docking
+  GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(imgui)
+
+add_library(imgui STATIC
+  ${imgui_SOURCE_DIR}/imgui.cpp
+  ${imgui_SOURCE_DIR}/imgui_draw.cpp
+  ${imgui_SOURCE_DIR}/imgui_tables.cpp
+  ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+  ${imgui_SOURCE_DIR}/imgui_demo.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+  ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp
+
+)
+
+target_include_directories(imgui PUBLIC
+  ${imgui_SOURCE_DIR}
+  ${imgui_SOURCE_DIR}/backends
+)
+
+target_link_libraries(imgui PUBLIC
+  SDL3::SDL3
+)
+
+#######
+
+# ---------------------------
+# ImGui-Plot
+# ---------------------------
+
+FetchContent_Declare(
+  imgui_plot
+  GIT_REPOSITORY https://github.com/soulthreads/imgui-plot.git
+  GIT_TAG master
+)
+
+FetchContent_MakeAvailable(imgui_plot)
+
+
+target_include_directories(imgui_plot PUBLIC
+  ${imgui_plot_SOURCE_DIR}
+)
+
+target_link_libraries(imgui_plot PUBLIC imgui)
+
+
 if (WIN32)
   # Add VLD (Visual Leak Detector) for memory leak detection on Windows
   find_package(VLD CONFIG)
@@ -130,6 +189,8 @@ target_link_libraries("${TARGET_NAME}" PUBLIC
   SDL3_ttf::SDL3_ttf
   glm::glm
   ${VLD_LIBRARIES}
+  imgui
+  imgui_plot
 )
 
 

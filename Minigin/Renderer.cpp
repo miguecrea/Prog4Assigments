@@ -5,6 +5,10 @@
 #include "SceneManager.h"
 #include "Texture2D.h"
 
+#include <imgui.h>
+#include <backends/imgui_impl_sdl3.h>
+#include <backends/imgui_impl_sdlrenderer3.h>
+
 void dae::Renderer::Init(SDL_Window* window)
 {
 	m_window = window;
@@ -22,15 +26,30 @@ void dae::Renderer::Init(SDL_Window* window)
 		std::cout << "Failed to create the renderer: " << SDL_GetError() << "\n";
 		throw std::runtime_error(std::string("SDL_CreateRenderer Error: ") + SDL_GetError());
 	}
+
+	ImGui::CreateContext();
+
+	ImGui_ImplSDL3_InitForSDLRenderer(window, m_renderer);
+	ImGui_ImplSDLRenderer3_Init(m_renderer);
 }
 
 void dae::Renderer::Render(float framePercentage) const
 {
+	
 	const auto& color = GetBackgroundColor();
 	SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderClear(m_renderer);
 
+	// --- Start ImGui frame ---
+	ImGui_ImplSDLRenderer3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
 	SceneManager::GetInstance().Render(framePercentage);
+
+	// --- End ImGui frame ---
+	ImGui::Render();
+	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),m_renderer);
 
 	SDL_RenderPresent(m_renderer);
 }
