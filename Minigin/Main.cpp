@@ -16,217 +16,186 @@
 #include"FPSComponent.h"
 #include"SineMovementComponent.h"
 #include <filesystem>
-#include <chrono>
-#include <iostream>
-#include <algorithm>
-#include <numeric>
-#include"CombinedGraphComponent.h"
+#include"Input/Command.h"
+#include"Input/SetPositionCommand.h"
+#include"Input/UpdatePositionCommand.h"
+#include"Input/InputManager.h"
+#include"Input/Keyboard.h"
+#include"Input/Controller.h"
 
 namespace fs = std::filesystem;
 
-void CreationOfGameObjectsAndComponents(dae::Scene & scene);
-float CalculateAverage(std::vector<float>& testResults);
-float CalculateAverage(std::vector<float>& testResults)
-{
-	const int tenPercent{ static_cast<int>(testResults.size() * 0.1f) };
 
-	std::sort(testResults.begin(), testResults.end());
-
-	const float totalTime{ std::accumulate(testResults.begin() + tenPercent, testResults.end() - tenPercent, 0.f) };
-	const float averageTime{ totalTime / (testResults.size() - 2 * tenPercent) };
-
-	return averageTime;
-}
-
-struct TransformX
-{
-	float matrix[16] =
-	{
-		1,0,0,0,
-		0,1,0,0,
-		0,0,1,0,
-		0,0,0,1
-	};
-};
-
-class GameObject3D
-{
-public:
-	TransformX transform{};
-	int ID{};
-};
-
-class GameObject3DAlt
-{
-public:
-	TransformX* transform{};
-	int ID{};
-};
-
-
-
-
-
-
+void CreationOfGameObjectsAndComponents(dae::Scene& scene);
 
 static void load()
 {
 
-	auto & scene = dae::SceneManager::GetInstance().CreateScene("Scene1");
 
-	//
-	auto pRotatingBallParent = std::make_shared<dae::GameObject>();  //make a game object
-
-	auto pParentRenderer = std::make_shared<dae::RenderComponent>();
-	pParentRenderer->SetTexture("Balloom.png");
-	pRotatingBallParent->AddComponent(pParentRenderer);  //add renderer to r
-	pRotatingBallParent->SetPosition(200, 230);
-
-	const glm::vec3 origin{ 300.f,320.f,0.f };
-	constexpr float length{ 50.f }, cycleTime{ 5.f };
-	auto sineMovementParent = std::make_shared<dae::SineMovementComponent>(origin, length, cycleTime);
-	pRotatingBallParent->AddComponent(sineMovementParent);
+	auto& scene = dae::SceneManager::GetInstance().CreateScene("Demo");
+	auto& input = dae::InputManager::GetInstance();
 
 
-	auto pRotatingBallChild = std::make_shared<dae::GameObject>();
-	auto pChildRenderer = std::make_shared<dae::RenderComponent>();
-	pChildRenderer->SetTexture("Oneal.png");
-	pRotatingBallChild->AddComponent(pChildRenderer);
-	auto sineMovementChild = std::make_shared<dae::SineMovementComponent>(glm::vec3{ 0.f,0.f,0.f }, length * 2.f, cycleTime);
-	pRotatingBallChild->AddComponent(sineMovementChild);
+	float setSpeed{ 100.f };
+	float updateSpeed{ 150.f };
 
-	pRotatingBallParent->AddChild(pRotatingBallChild, true); //set as child 
+	auto pPlayer1 = std::make_shared<dae::GameObject>();
 
-	//Only Add Parent to the scene 
+	auto pPlayer1Renderer = std::make_shared<dae::RenderComponent>();
+	pPlayer1Renderer->SetTexture("Balloom.png");
+	pPlayer1->AddComponent(pPlayer1Renderer);
+	pPlayer1->SetPosition(100, 100);
+	scene.Add(pPlayer1);
 
-	scene.Add(pRotatingBallParent);
+	auto controller{ input.AddController() };
 
 
 
+	glm::vec3 direction{ 0.f,-setSpeed,0.f };
+	std::unique_ptr<dae::Command> pMoveCommand{ std::make_unique<dae::SetPositionCommand>(pPlayer1.get(), direction) };  //player 1 and direction
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonY, std::move(pMoveCommand), dae::ButtonState::Down);
+
+
+	direction = { 0.f,setSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonA, std::move(pMoveCommand), dae::ButtonState::Down);
+
+
+
+	direction = { -setSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonX, std::move(pMoveCommand), dae::ButtonState::Down);
+
+	direction = { setSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonB, std::move(pMoveCommand), dae::ButtonState::Down);
+
+
+
+	direction = { 0.f,-updateSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadUp, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { 0.f,updateSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadDown, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { -updateSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadLeft, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { updateSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer1.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadRight, std::move(pMoveCommand), dae::ButtonState::Pressed);
 
 
 
 
-	 auto pTrashTheCasheObject_01{ std::make_shared<dae::GameObject>() }; 
+	setSpeed *= 0.5f;
+	updateSpeed *= 0.5f;
 
-	 pTrashTheCasheObject_01->SetPosition(700.f, 200.f);
-		//////////////////
-	auto testFunction_01 = [&](std::vector<float>& xValues, std::vector<float>& yValues, int nrTests, int nrTestValues)
-		{
-			xValues.clear();
-			yValues.clear();
+	auto pPlayer2 = std::make_shared<dae::GameObject>();  //PLAYER 2  
 
-			int* values{ new int[nrTestValues] {} };
-			std::vector<float> testResults{};
-
-			for (int stepsize{ 1 }; stepsize <= 1024; stepsize *= 2)
-			{
-				for (int testIndex{ 0 }; testIndex < nrTests; ++testIndex)
-				{
-					const auto start{ std::chrono::high_resolution_clock::now() };
-					for (int index{}; index < nrTestValues; index += stepsize)
-					{
-						values[index] *= 2;
-					}
-					const auto end{ std::chrono::high_resolution_clock::now() };
-					const auto elapsedTime{ std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() };
-					testResults.push_back(elapsedTime / 1000.f);
-				}
-
-				xValues.push_back(static_cast<float>(stepsize));
-				yValues.push_back(CalculateAverage(testResults));
-
-				testResults.clear();
-			}
-			delete[] values;
-		};
-
-	auto pGraphComponent_01{ std::make_shared<dae::GraphComponent>(testFunction_01, "Excercise 01") };
-	pTrashTheCasheObject_01->AddComponent(pGraphComponent_01);
-
-	scene.Add(pTrashTheCasheObject_01);
+	auto pPlayer2Renderer = std::make_shared<dae::RenderComponent>();
+	pPlayer2Renderer->SetTexture("Oneal.png");
+	pPlayer2->AddComponent(pPlayer2Renderer);
+	pPlayer2->SetPosition(200, 200);
+	scene.Add(pPlayer2);
 
 
-	///
+	auto keyboard{ input.GetKeyboard() };
 
+	direction = { 0.f,-setSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_UP, std::move(pMoveCommand), dae::ButtonState::Down);
 
-	auto pTrashTheCasheObject_02{ std::make_shared<dae::GameObject>() };
+	direction = { 0.f,setSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_DOWN, std::move(pMoveCommand), dae::ButtonState::Down);
 
-	auto testFunction_02 = [&](std::vector<float>& xValues, std::vector<float>& yValues, int nrTests, int nrTestValues)
-		{
-			xValues.clear();
-			yValues.clear();
+	direction = { -setSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_LEFT, std::move(pMoveCommand), dae::ButtonState::Down);
 
-			GameObject3D * values{ new GameObject3D[nrTestValues] {} };
-			std::vector<float> testResults{};
-
-			for (int stepsize{ 1 }; stepsize <= 1024; stepsize *= 2)
-			{
-				for (int testIndex{ 0 }; testIndex < nrTests; ++testIndex)
-				{
-					const auto start{ std::chrono::high_resolution_clock::now() };
-					for (int index{}; index < nrTestValues; index += stepsize)
-					{
-						values[index].ID *= 2;
-					}
-					const auto end{ std::chrono::high_resolution_clock::now() };
-					const auto elapsedTime{ std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() };
-					testResults.push_back(elapsedTime / 1000.f);
-				}
-
-				xValues.push_back(static_cast<float>(stepsize));
-				yValues.push_back(CalculateAverage(testResults));
-
-				testResults.clear();
-			}
-			delete[] values;
-		};
-
-	auto testFunction_03 = [&](std::vector<float>& xValues, std::vector<float>& yValues, int nrTests, int nrTestValues)
-		{
-			xValues.clear();
-			yValues.clear();
-
-			GameObject3DAlt * values{ new GameObject3DAlt[nrTestValues] {} };
-			std::vector<float> testResults{};
-
-			for (int stepsize{ 1 }; stepsize <= 1024; stepsize *= 2)
-			{
-				for (int testIndex{ 0 }; testIndex < nrTests; ++testIndex)
-				{
-					const auto start{ std::chrono::high_resolution_clock::now() };
-					for (int index{}; index < nrTestValues; index += stepsize)
-					{
-						values[index].ID *= 2;
-					}
-					const auto end{ std::chrono::high_resolution_clock::now() };
-					const auto elapsedTime{ std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() };
-					testResults.push_back(elapsedTime / 1000.f);
-
-					std::cout << "Step size: " << stepsize
-						<< ", Test Index: " << testIndex
-						<< ", Time (ms): " << elapsedTime / 1000.f
-						<< std::endl;
-				}
-
-				xValues.push_back(static_cast<float>(stepsize));
-				yValues.push_back(CalculateAverage(testResults));
-
-
-				//std::cout << xValues[stepsize] << "\n";
-
-				testResults.clear();
-			}
-			delete[] values;
-		};
-
-	auto pGraphComponent_02{ std::make_shared<dae::CombinedGraphComponent>(testFunction_02,testFunction_03, "Excercise 02") };
-	pTrashTheCasheObject_02->AddComponent(pGraphComponent_02);
-
-	scene.Add(pTrashTheCasheObject_02);
+	direction = { setSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_RIGHT, std::move(pMoveCommand), dae::ButtonState::Down);
 
 
 
+
+	direction = { 0.f,-updateSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_W, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { 0.f,updateSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_S, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { -updateSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_A, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { updateSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	keyboard->MapCommandToButton(SDL_SCANCODE_D, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	controller = { input.AddController() };
+
+	direction = { 0.f,-setSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonY, std::move(pMoveCommand), dae::ButtonState::Down);
+
+	direction = { 0.f,setSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonA, std::move(pMoveCommand), dae::ButtonState::Down);
+
+	direction = { -setSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonX, std::move(pMoveCommand), dae::ButtonState::Down);
+
+	direction = { setSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::SetPositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::ButtonB, std::move(pMoveCommand), dae::ButtonState::Down);
+
+	//Button pressed
+	direction = { 0.f,-updateSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadUp, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { 0.f,updateSpeed,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadDown, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { -updateSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadLeft, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+	direction = { updateSpeed,0.f,0.f };
+	pMoveCommand = { std::make_unique<dae::UpdatePositionCommand>(pPlayer2.get(), direction) };
+	controller->MapCommandToButton(dae::Controller::ControllerButtons::DPadRight, std::move(pMoveCommand), dae::ButtonState::Pressed);
+
+
+
+
+
+	auto pTextImage = std::make_shared<dae::GameObject>();
+	auto pTextRenderer = std::make_shared<dae::RenderComponent>();
+	auto pProgTextComponent = std::make_shared<dae::TextComponent>(pTextRenderer, dae::ResourceManager::GetInstance().LoadFont("Lingua.otf", 36));
+	pProgTextComponent->SetTextToTexture("Use the D-Pad to move Pacman");
+	pTextImage->AddComponent(pTextRenderer);
+	pTextImage->SetPosition(80, 90);
+
+	auto pTextImage2 = std::make_shared<dae::GameObject>();
+	auto pTextRenderer2 = std::make_shared<dae::RenderComponent>();
+	auto pProgTextComponent2 = std::make_shared<dae::TextComponent>(pTextRenderer2, dae::ResourceManager::GetInstance().LoadFont("Lingua.otf", 36));
+	pProgTextComponent2->SetTextToTexture("Use the WASD to move MRS Pacman");
+	pTextImage2->AddComponent(pTextRenderer2);
+	pTextImage2->SetPosition(80, 140);
+
+
+	scene.Add(pTextImage);
+	scene.Add(pTextImage2);
 	CreationOfGameObjectsAndComponents(scene);
 }
 
@@ -236,19 +205,11 @@ void CreationOfGameObjectsAndComponents(dae::Scene& scene)
 	auto pLogoRender = std::make_shared<dae::RenderComponent>();
 	pLogoRender->SetTexture("logo.png");
 	pLogoImage->AddComponent(pLogoRender);
-	pLogoImage->SetPosition(400, 200);
+	pLogoImage->SetPosition(390, 200);
 
 	scene.Add(pLogoImage);
 
-	auto pTextImage = std::make_shared<dae::GameObject>();
 
-	auto pTextRenderer = std::make_shared<dae::RenderComponent>();
-	auto pProgTextComponent = std::make_shared<dae::TextComponent>(pTextRenderer, dae::ResourceManager::GetInstance().LoadFont("Lingua.otf", 36));
-	pProgTextComponent->SetTextToTexture("Programming 4 Assignment");
-
-	pTextImage->AddComponent(pTextRenderer);
-	pTextImage->SetPosition(80, 50);
-	scene.Add(pTextImage);
 
 	auto pBackgroundImage = std::make_shared<dae::GameObject>(100);
 

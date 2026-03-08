@@ -14,29 +14,34 @@ else()
 endif()
 
 # list source files here
+
+
 add_executable(${TARGET_NAME} ${TARGET_PARAM}
-  Minigin/Font.cpp
-  Minigin/GameObject.cpp
-  Minigin/InputManager.cpp
-  Minigin/Main.cpp
-  Minigin/Minigin.cpp
-  Minigin/Renderer.cpp
-  Minigin/ResourceManager.cpp
-  Minigin/Scene.cpp
-  Minigin/SceneManager.cpp
-  Minigin/TextObject.cpp
-  Minigin/Texture2D.cpp
-  Minigin/Transform.cpp
-  Minigin/FPSComponent.cpp
-  Minigin/Component.cpp
-  Minigin/TextComponent.cpp
-  Minigin/RenderComponent.cpp
-  Minigin/SineMovementComponent.cpp
-  Minigin/CombinedGraphComponent.cpp
-  Minigin/GraphComponent.cpp
+   Minigin/Font.cpp
+   Minigin/GameObject.cpp
+   "Minigin/Input/InputManager.cpp"
+   Minigin/Main.cpp
+   Minigin/Minigin.cpp
+   Minigin/Renderer.cpp
+   Minigin/ResourceManager.cpp
+   Minigin/Scene.cpp
+   Minigin/SceneManager.cpp
+   Minigin/TextObject.cpp
+   Minigin/Texture2D.cpp
+   Minigin/Transform.cpp
+   Minigin/FPSComponent.cpp
+   Minigin/Component.cpp
+   Minigin/TextComponent.cpp
+   Minigin/RenderComponent.cpp
+   Minigin/SineMovementComponent.cpp
+   Minigin/Input/Command.cpp
+   Minigin/Input/Controller.cpp
+   Minigin/Input/Keyboard.cpp
+   Minigin/Input/SetPositionCommand.cpp
+   Minigin/Input/UpdatePositionCommand.cpp
+   )
 
 
-)
 
 # enable c++20 features
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_20)
